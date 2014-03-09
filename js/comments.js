@@ -1,47 +1,17 @@
-/**
- * TODO
- *
- * Externalize window event handling
- * Camera handling and functionality
- * - drag and spin example: http://localdev/threedee/threejs/examples/webgl_geometry_extrude_shapes.html
- * - normal handling (what is used initially)
- * - this should include all event listeners for camera operations
- * Shaders
- * - http://localdev/threedee/threejs/examples/webgl_custom_attributes_particles2.html
- * - http://www.html5rocks.com/en/tutorials/webgl/million_letters/
- * - blur shader: http://localdev/threedee/threejs/examples/webgl_particles_sprites.html
- * Build OOP way
- * - Comment Class (Node item)
- * Implement TweenMax where necessary
- */
 
-/**
- * Controls
- *
- * hide / show stats
- * reset camera position
- * choose camera type
- * show xyz coordinates in center
- */
+// TODO
+// - externalize window event handling
+// - externalize camera
+// - controls
+//    - hide/show stats
+//    - rotate camera / camera controls with common functionality
+// - util
+//    - random range
+// - orbit controls
+//    - consider using with momentum https://gist.github.com/paulkaplan/5770247
 
+// - is using blur - http://localdev/threedee/threejs/examples/webgl_particles_sprites.html
 
-/**
- * Sphere Idea
- * All comments are on perimeter of sphere. When a comment is added, the connections that its makes (the conversation) is
- * highlighted.
- */
-
-/**
- * Top Down Idea
- * Comments with no parents are displayed on top. Any child comments are displayed going down in y direction. Lines are
- * drawn to show comment connections
- */
-
-/**
- * Universe Idea
- * A conversation is a cluster (a group of comments). Within each cluster all the nodes organize themselves uniformaly (gravity / spring / repel).
- * In the 'universe' these clusters will organize themselves uniformly. Random comments will 'fill in the gaps'
- */
 
 /**
  * Note: if you notice bad framerate, make sure display is set to "Best For Retina"
@@ -50,14 +20,14 @@
 if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
 var container, stats;
-var camera, scene, renderer, particles, line, nodeMaterial, parameters, i, h, color;
+var camera, scene, renderer, particles, geometry, lineMaterial, line, nodeMaterial, parameters, i, h, color;
 var mouseX = 0, mouseY = 0, scrollPos = 0;
 
 var windowHalfX = window.innerWidth / 2;
 var windowHalfY = window.innerHeight / 2;
 
 var comments = [];
-createComments(1000);
+// createComments(1000);
 
 init();
 animate();
@@ -88,8 +58,82 @@ function init() {
   container.appendChild( stats.domElement );
 
   // BUILD SCENE
-   buildSphereScene()
- // buildTopDownScene()
+  nodeMaterial = new THREE.SpriteMaterial( {
+    color: 0xffffff,
+    opacity: 1
+  });
+
+  geometry = new THREE.Geometry();
+
+  var particle;
+  for ( var i = 0; i < 100; i ++ ) {
+
+    particle = new THREE.Sprite( nodeMaterial );
+    particle.position.x = Math.random() * 2 - 1;
+    particle.position.y = Math.random() * 2 - 1;
+    particle.position.z = Math.random() * 2 - 1;
+    particle.position.normalize();
+    particle.position.multiplyScalar( Math.random() * 10 + 450 );
+    particle.scale.x = particle.scale.y = 10;
+    //scene.add( particle );
+
+    geometry.vertices.push( particle.position );
+
+  }
+
+  // lines
+  lineMaterial = new THREE.LineBasicMaterial({
+    color: 0xffffff,
+    opacity: 1,
+    transparent: false
+  });
+  
+  line = new THREE.Line( geometry, lineMaterial );
+  scene.add( line );
+
+
+
+
+
+  // geometry = new THREE.Geometry();
+
+  // for ( i = 0; i < 20000; i ++ ) {
+
+  //   var vertex = new THREE.Vector3();
+  //   vertex.x = Math.random() * 800 - 400;
+  //   vertex.y = Math.random() * 800 - 400;
+  //   vertex.z = Math.random() * 800 - 400;
+
+  //   geometry.vertices.push( vertex );
+
+  // }
+
+  // parameters = [
+  //   [ [1, 1, 0.5], 5 ],
+  //   [ [0.95, 1, 0.5], 4 ],
+  //   [ [0.90, 1, 0.5], 3 ],
+  //   [ [0.85, 1, 0.5], 2 ],
+  //   [ [0.80, 1, 0.5], 1 ]
+  // ];
+
+  // for ( i = 0; i < parameters.length; i ++ ) {
+
+  //   color = parameters[i][0];
+  //   size  = parameters[i][1];
+
+  //   materials[i] = new THREE.ParticleBasicMaterial( { size: size } );
+
+  //   particles = new THREE.ParticleSystem( geometry, materials[i] );
+
+  //   particles.rotation.x = Math.random() * 6;
+  //   particles.rotation.y = Math.random() * 6;
+  //   particles.rotation.z = Math.random() * 6;
+
+  //   scene.add( particles );
+
+  // }
+
+
 
   document.addEventListener( 'mousemove', onDocumentMouseMove, false );
   document.addEventListener( 'touchstart', onDocumentTouchStart, false );
@@ -105,142 +149,30 @@ function init() {
 
 }
 
-function buildTopDownScene() {
-  var sprite = THREE.ImageUtils.loadTexture( "img/textures/disc.png" );
-  var lineMaterial = new THREE.LineBasicMaterial({
-    color: 0xffffff,
-    opacity: 0.5,
-    transparent: true
-  });
-
-  var vertex;
-  var lineGeometry;
-  var nodeGeometry = new THREE.Geometry();
-
-  for ( var i = 0; i < comments.length; i ++ ) {
-
-    item = comments[i];
-
-    if(item.parentNodeId === undefined) {
-      vertex = new THREE.Vector3();
-      vertex.x = Math.random() * 2 - 1;
-      vertex.z = Math.random() * 2 - 1;
-//      vertex.normalize();
-      vertex.multiplyScalar( Math.random() * 10 + 650 );
-
-      // say top is 200
-      vertex.y = 200
-
-    } else {
-      vertex = comments[item.parentNodeId].vertex.clone()
-      vertex.x += Util.randomRange(-50, 50);
-      vertex.z += Util.randomRange(-50, 50)
-      vertex.y -= 100
-    }
-
-
-    // save vertex reference
-    comments[i].vertex = vertex;
-    nodeGeometry.vertices.push( vertex );
-
-    // add line
-    if(comments[i].parentNodeId !== undefined) {
-      lineGeometry = new THREE.Geometry();
-      lineGeometry.vertices.push( comments[ comments[i].parentNodeId ].vertex );
-      lineGeometry.vertices.push( vertex );
-
-      line = new THREE.Line( lineGeometry, lineMaterial );
-      scene.add( line );
-    }
-
-  }
-
-
-  // build particle system
-  var nodeMaterial = new THREE.ParticleSystemMaterial( { size: 15, sizeAttenuation: false, map: sprite, transparent: true } );
-  nodeMaterial.color.setHex( 0x00ff00 );
-
-  particles = new THREE.ParticleSystem( nodeGeometry, nodeMaterial );
-  particles.sortParticles = true;
-  scene.add( particles );
-
-}
-
-
-// a sphere where all nodes are positioned on outside and lines are connecting inside
-function buildSphereScene() {
-  var sprite = THREE.ImageUtils.loadTexture( "img/textures/disc.png" );
-  var lineMaterial = new THREE.LineBasicMaterial({
-    color: 0xffffff,
-    opacity: 0.5,
-    transparent: true
-  });
-
-
-  // every vertex is a particle position
-  var vertex;
-  var lineGeometry;
-  var nodeGeometry = new THREE.Geometry();
-
-  for ( var i = 0; i < comments.length; i ++ ) {
-
-    vertex = new THREE.Vector3();
-    vertex.x = Math.random() * 2 - 1;
-    vertex.y = Math.random() * 2 - 1;
-    vertex.z = Math.random() * 2 - 1;
-    vertex.normalize();
-    vertex.multiplyScalar( Math.random() * 10 + 550 );
-
-    // save vertex reference
-    comments[i].vertex = vertex;
-    nodeGeometry.vertices.push( vertex );
-
-    // add line
-    if(comments[i].parentNodeId !== undefined) {
-      lineGeometry = new THREE.Geometry();
-      lineGeometry.vertices.push( comments[ comments[i].parentNodeId ].vertex );
-      lineGeometry.vertices.push( vertex );
-
-      line = new THREE.Line( lineGeometry, lineMaterial );
-      scene.add( line );
-    }
-
-  }
-
-
-  // build particle system
-  var nodeMaterial = new THREE.ParticleSystemMaterial( { size: 15, sizeAttenuation: false, map: sprite, transparent: true } );
-  nodeMaterial.color.setHex( 0x00ff00 );
-
-  particles = new THREE.ParticleSystem( nodeGeometry, nodeMaterial );
-  particles.sortParticles = true;
-  scene.add( particles );
-
-}
-
 function createComments(count) {
   // loop and create comment objets
   var i, item;
   for(i = 0; i < count; i++) {
-
     item = {
       id: i,
-      children: [],
+      parentNode: undefined,
       message: "this is comment " + i
     };
-
-    // parent node (a conversation) - about x% of time choose a parent node
-    if(i !== 0 && (Math.random() <= 0.6)) {
-      console.log("convo")
-      item.parentNodeId = Util.randomRangeInt(0, i-1);
-
-      // update parent with data
-      comments[item.parentNodeId].children.push(i)
-    }
 
     comments.push(item);
   }
 
+  // loop and apply parent nodes (w/%)
+  // parent node can only be from a previous comment
+  for(i = 0; i < count; i++) {
+    item = comments[i];
+
+    // about 40% of time choose a parent node
+    if(i !== 0 && (Math.random() <= 0.4)) {
+      parentPosition = Util.randomRangeInt(0, i-1);
+      item.parentNode = comments[parentPosition].id;
+    }
+  }
 }
 
 function onWindowResize() {
@@ -306,7 +238,7 @@ function animate() {
 
 function render() {
 
-//  var time = Date.now() * 0.00005;
+  var time = Date.now() * 0.00005;
 
   camera.position.x += ( mouseX - camera.position.x ) * 0.05;
   camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
